@@ -1,8 +1,6 @@
 #include <kernel/vga_text.h>
 #include <utils.h>
 
-#define VGA_START 0xb8000
-
 void idt_init() {}
 
 void kmain() {

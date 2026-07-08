@@ -20,7 +20,7 @@ KERNELDIR := kernel
 KERNEL := $(wildcard $(KERNELDIR)/*.c)
 KERNELOBJ := $(patsubst %.c,$(BUILD)/%.o,$(KERNEL))
 KERNELELF := $(BUILD)/$(KERNELDIR)/kernel.elf
-KERNELBIN := $(KERNELELF:%.elf=.bin)
+KERNELBIN := $(KERNELELF:.elf=.bin)
 
 KERNEL_ENTRY := $(KERNELDIR)/kernel.asm
 KERNEL_ENTRYOBJ := $(patsubst %.asm,$(BUILD)/%.o,$(KERNEL_ENTRY))
