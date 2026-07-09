@@ -6,7 +6,7 @@ xor ax, ax
 mov ds, ax
 
 mov ah, 0x02
-mov al, 10
+mov al, 100
 xor ch, ch
 mov cl, 3
 xor dh, dh

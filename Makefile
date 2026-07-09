@@ -17,7 +17,8 @@ BUILD := build
 BOOTDIR := boot
 KERNELDIR := kernel
 
-KERNEL := $(wildcard $(KERNELDIR)/*.c)
+KERNEL := $(wildcard $(KERNELDIR)/*.c) \
+		  $(wildcard $(KERNELDIR)/interrupt/*.c)
 KERNELOBJ := $(patsubst %.c,$(BUILD)/%.o,$(KERNEL))
 KERNELELF := $(BUILD)/$(KERNELDIR)/kernel.elf
 KERNELBIN := $(KERNELELF:.elf=.bin)
