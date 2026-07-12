@@ -1,8 +1,21 @@
 #include <kernel/interrupt/idt.h>
 
+#include <kernel/interrupt/cpuint.h>
 #include <kernel/interrupt/irq.h>
 #include <kernel/vga_text.h>
 #include <utils.h>
+
+#define IDTENTRY_SET_INT(n, ist)                                               \
+    idtentry_set(n, (uintptr_t)isr_cpuint##n, GDT_KERNEL_CODE_ENTRY, ist,      \
+                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
+
+#define IDTENTRY_SET_TRAP(n, ist)                                              \
+    idtentry_set(n, (uintptr_t)isr_cpuint##n, GDT_KERNEL_CODE_ENTRY, ist,      \
+                 IDT_TRAP_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
+
+#define IDTENTRY_SET_IRQ(n, ist)                                               \
+    idtentry_set(n + 0x20, (uintptr_t)isr_irq##n, GDT_KERNEL_CODE_ENTRY, ist,  \
+                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
 
 struct IDTEntry idt[256] = {0};
 
@@ -10,111 +23,6 @@ struct __attribute__((packed)) {
     uint16_t size;
     uintptr_t base;
 } idt_desc;
-
-static void divide_error(void) {
-    kprint("\nerror: #DE fault.");
-    __asm volatile("hlt");
-}
-
-static void debug_exception(void) {
-    kprint("\nerror: #DB trap.");
-    __asm volatile("hlt");
-}
-
-static void nmi_int(void) {
-    kprint("\nNMI happened.");
-    __asm volatile("hlt");
-}
-
-static void breakpoint(void) {
-    kprint("\n#BP trap.");
-    __asm volatile("hlt");
-}
-
-static void bound_range_exceeded(void) {
-    kprint("\nerror: #BR fault.");
-    __asm volatile("hlt");
-}
-
-static void overflow(void) {
-    kprint("\n#OF trap.");
-    __asm volatile("hlt");
-}
-
-static void undef_opcode(void) {
-    kprint("\nerror: #UD fault.");
-    __asm volatile("hlt");
-}
-
-static void no_math_coproc(void) {
-    kprint("\nerror: #NM fault.");
-    __asm volatile("hlt");
-}
-
-static void double_fault(void) {
-    kprint("\nerror: #DF fault.");
-    __asm volatile("hlt");
-}
-
-static void coproc_seg_overrun(void) {
-    kprint("\nCoprocessor Segment Overrun.");
-    __asm volatile("hlt");
-}
-
-static void invalid_tss(void) {
-    kprint("\nerror: #TS fault.");
-    __asm volatile("hlt");
-}
-
-static void seg_not_present(void) {
-    kprint("\nerror: #NP fault.");
-    __asm volatile("hlt");
-}
-
-static void stack_seg_fault(void) {
-    kprint("\nerror: #SS fault.");
-    __asm volatile("hlt");
-}
-
-static void gen_prot(void) {
-    kprint("\nerror: #GP fault.");
-    __asm volatile("hlt");
-}
-
-static void page_fault(void) {
-    kprint("\nerror: #PF fault.");
-    __asm volatile("hlt");
-}
-
-static void math_fault(void) {
-    kprint("\nerror: #MF fault.");
-    __asm volatile("hlt");
-}
-
-static void align_check(void) {
-    kprint("\nerror: #AC fault.");
-    __asm volatile("hlt");
-}
-
-static void machine_check(void) {
-    kprint("\nerror: #MC abort.");
-    __asm volatile("hlt");
-}
-
-static void simd_fp_exception(void) {
-    kprint("\nerror: #XM fault.");
-    __asm volatile("hlt");
-}
-
-static void virt_exception(void) {
-    kprint("\nerror: #VE fault.");
-    __asm volatile("hlt");
-}
-
-static void control_prot_exception(void) {
-    kprint("\nerror: #CP fault.");
-    __asm volatile("hlt");
-}
 
 void idtentry_set_offset(struct IDTEntry *self, uintptr_t offset) {
     self->offset1 = offset & 0xffff;
@@ -154,82 +62,46 @@ static void idt_desc_load() {
 
 void idt_init(void) {
     // Internal CPU interrupts
-    idtentry_set(0, (uintptr_t)divide_error, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(1, (uintptr_t)debug_exception, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_TRAP_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(2, (uintptr_t)nmi_int, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(3, (uintptr_t)breakpoint, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_TRAP_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(4, (uintptr_t)overflow, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_TRAP_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(5, (uintptr_t)bound_range_exceeded, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(6, (uintptr_t)undef_opcode, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(7, (uintptr_t)no_math_coproc, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(8, (uintptr_t)double_fault, GDT_KERNEL_CODE_ENTRY, 1,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(9, (uintptr_t)coproc_seg_overrun, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(10, (uintptr_t)invalid_tss, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(11, (uintptr_t)seg_not_present, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(12, (uintptr_t)stack_seg_fault, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(13, (uintptr_t)gen_prot, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(14, (uintptr_t)page_fault, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(16, (uintptr_t)math_fault, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(17, (uintptr_t)align_check, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(18, (uintptr_t)machine_check, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(19, (uintptr_t)simd_fp_exception, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(20, (uintptr_t)virt_exception, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(21, (uintptr_t)control_prot_exception, GDT_KERNEL_CODE_ENTRY,
-                 0, IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
+    IDTENTRY_SET_INT(0, 0);
+    IDTENTRY_SET_TRAP(1, 0);
+    IDTENTRY_SET_INT(2, 0);
+    IDTENTRY_SET_TRAP(3, 0);
+    IDTENTRY_SET_TRAP(4, 0);
+    IDTENTRY_SET_INT(5, 0);
+    IDTENTRY_SET_INT(6, 0);
+    IDTENTRY_SET_INT(7, 0);
+    IDTENTRY_SET_INT(8, 1);
+    IDTENTRY_SET_INT(9, 0);
+    IDTENTRY_SET_INT(10, 0);
+    IDTENTRY_SET_INT(11, 0);
+    IDTENTRY_SET_INT(12, 0);
+    IDTENTRY_SET_INT(13, 0);
+    IDTENTRY_SET_INT(14, 0);
+    // int 15 reserved
+    IDTENTRY_SET_INT(16, 0);
+    IDTENTRY_SET_INT(17, 0);
+    IDTENTRY_SET_INT(18, 0);
+    IDTENTRY_SET_INT(19, 0);
+    IDTENTRY_SET_INT(20, 0);
+    IDTENTRY_SET_INT(21, 0);
 
     // External IRQs
-    idtentry_set(32, (uintptr_t)isr0, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(33, (uintptr_t)isr1, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(34, (uintptr_t)isr2, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(35, (uintptr_t)isr3, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(36, (uintptr_t)isr4, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(37, (uintptr_t)isr5, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(38, (uintptr_t)isr6, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(39, (uintptr_t)isr7, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(40, (uintptr_t)isr8, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(41, (uintptr_t)isr9, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(42, (uintptr_t)isr10, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(43, (uintptr_t)isr11, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(44, (uintptr_t)isr12, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(45, (uintptr_t)isr13, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(46, (uintptr_t)isr14, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
-    idtentry_set(47, (uintptr_t)isr15, GDT_KERNEL_CODE_ENTRY, 0,
-                 IDT_INTERRUPT_GATE, DPL_KERNEL_PRIVILEGE_LEVEL);
+    IDTENTRY_SET_IRQ(0, 0);
+    IDTENTRY_SET_IRQ(1, 0);
+    IDTENTRY_SET_IRQ(2, 0);
+    IDTENTRY_SET_IRQ(3, 0);
+    IDTENTRY_SET_IRQ(4, 0);
+    IDTENTRY_SET_IRQ(5, 0);
+    IDTENTRY_SET_IRQ(6, 0);
+    IDTENTRY_SET_IRQ(7, 0);
+    IDTENTRY_SET_IRQ(8, 0);
+    IDTENTRY_SET_IRQ(9, 0);
+    IDTENTRY_SET_IRQ(10, 0);
+    IDTENTRY_SET_IRQ(11, 0);
+    IDTENTRY_SET_IRQ(12, 0);
+    IDTENTRY_SET_IRQ(13, 0);
+    IDTENTRY_SET_IRQ(14, 0);
+    IDTENTRY_SET_IRQ(15, 0);
 
     idt_desc_load();
 }

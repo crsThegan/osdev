@@ -6,22 +6,22 @@
 // ISRs that are defined in kernel/kernel.asm.
 // They are uncallable and should only be used for loading their address into an
 // IDT entry.
-extern void isr0(void);
-extern void isr1(void);
-extern void isr2(void);
-extern void isr3(void);
-extern void isr4(void);
-extern void isr5(void);
-extern void isr6(void);
-extern void isr7(void);
-extern void isr8(void);
-extern void isr9(void);
-extern void isr10(void);
-extern void isr11(void);
-extern void isr12(void);
-extern void isr13(void);
-extern void isr14(void);
-extern void isr15(void);
+extern void isr_irq0(void);
+extern void isr_irq1(void);
+extern void isr_irq2(void);
+extern void isr_irq3(void);
+extern void isr_irq4(void);
+extern void isr_irq5(void);
+extern void isr_irq6(void);
+extern void isr_irq7(void);
+extern void isr_irq8(void);
+extern void isr_irq9(void);
+extern void isr_irq10(void);
+extern void isr_irq11(void);
+extern void isr_irq12(void);
+extern void isr_irq13(void);
+extern void isr_irq14(void);
+extern void isr_irq15(void);
 
 void irq0_handler(void);
 void irq1_handler(void);
