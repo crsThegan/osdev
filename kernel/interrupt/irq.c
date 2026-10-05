@@ -3,11 +3,11 @@
 #include <kernel/io.h>
 #include <kernel/vga_text.h>
 
-#define PCI1_CMD 0x20
+#define PIC1_CMD 0x20
 
 uint32_t ticks = 0;
 
-static inline void int_ack() { outb(PCI1_CMD, 0x20); }
+static inline void int_ack() { outb(PIC1_CMD, 0x20); }
 
 void irq0_handler(void) {
     ticks++;
